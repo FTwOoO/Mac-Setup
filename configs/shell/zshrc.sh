@@ -1,11 +1,6 @@
-#!/usr/bin/env zsh
+#!/bin/sh
 
-CURRENT_FILE=`readlink ${0}`
-if [ "$CURRENT_FILE" = "" ]
-then
-     CURRENT_FILE="${0}"
-fi
-
+CURRENT_FILE=`readlink ~/.zshrc`
 CURRENT_DIR=`dirname $CURRENT_FILE`
 
 source $CURRENT_DIR/aliases.sh
