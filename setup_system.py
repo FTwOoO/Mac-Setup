@@ -242,9 +242,6 @@ class OpenSSL(Program):
 
     @classmethod
     def newVersion(self) -> PackageVersionInfo:
-        if hasattr(self, '_newVersion'):
-            return self._newVersion
-
         pageURL = 'https://www.openssl.org/source/'
         packageURL = extract_url_from_htmlpage_by_regex(pageURL, r'<a\shref\="(openssl-1[-\d\.\w]+\.tar\.gz)"\>')
         packageURL = pageURL + packageURL
@@ -350,8 +347,12 @@ class Golang(Program):
     def success_callback(self):
         ob = Zsh(self.ctx)
         ob.export_path(os.path.dirname(self.ctx.installInfo[self.name()].ExecuteFileLocation))
-        gopath = os.path.join(os.path.dirname(self.ctx.installInfo[self.name()].InstallLocation), "gopath")
+
+        gopath = os.path.join(self.ctx.config.BinDirectory, "gopath")
+        gobin = os.path.join(gopath, 'bin/')
+
         ob.export("GOPATH", gopath)
+        ob.export_path(gobin)
 
 
 class Zsh(Program):
