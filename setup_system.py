@@ -23,7 +23,7 @@ HOME_DIR = os.path.abspath(os.path.expanduser("~"))
 ZSH_CONFIG_FILE = os.path.join(HOME_DIR, ".zshrc")
 PACKAGES_INFO_FILE = os.path.join(BASE_DIR, ".packages.json")
 
-Config = collections.namedtuple("Config", ["BinDirectory", "ConfigDirectory", "Update"])
+Config = collections.namedtuple("Config", ["BinDirectory", "ConfigDirectory", "Force"])
 
 InstallationInfo = collections.namedtuple("InstallationInfo",
                                           [
@@ -111,7 +111,7 @@ class Program:
         originInfo = self.ctx.installInfo.get(self.name())
         versionInfo = self.newVersion()
 
-        if self.ctx.config.Update and originInfo is not None and originInfo.Version == versionInfo.Version:
+        if not self.ctx.config.Force and originInfo is not None and originInfo.Version == versionInfo.Version:
             if originInfo.InstallLocation and os.path.isdir(originInfo.InstallLocation):
                 print("The program[{}] is update to date".format(self.name()))
                 return
@@ -352,6 +352,7 @@ class Golang(Program):
         gobin = os.path.join(gopath, 'bin/')
 
         ob.export("GOPATH", gopath)
+        ob.export("GOROOT", self.ctx.installInfo[self.name()].InstallLocation)
         ob.export_path(gobin)
 
 
@@ -373,7 +374,7 @@ class Zsh(Program):
 
         target.symlink_to(zsh_config)
         target.chmod(stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP)
-        subprocess.run("{}".format(zsh_config), check=True, shell=True)
+        subprocess.run("zsh {}".format(zsh_config), check=True, shell=True)
 
         self.ctx.installInfo[self.name()] = InstallationInfo(
             Name=self.name(),
@@ -404,29 +405,28 @@ INSTALLER = {
     'openssl': OpenSSL,
 }
 
-CMD_UPDATE = 'update'
+CMD_FORCE= 'force'
 CMD_PROGRAMS = 'programs'
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(prog='setup_system')
-    parser.add_argument('--update', '-u',
-                        dest=CMD_UPDATE,
+    parser.add_argument('--force', '-f',
+                        dest=CMD_FORCE,
                         action='store_true',
-                        help='Check if there has updates, if so, update it')
-
+                        default=False)
     parser.add_argument(CMD_PROGRAMS,
                         nargs="+",
                         choices=INSTALLER.keys(),
                         help="Programs to install, available programs:{}".format(','.join(INSTALLER.keys())))
 
     args = vars(parser.parse_args())
-    update = args[CMD_UPDATE]
+    force = args[CMD_FORCE]
     programs = args[CMD_PROGRAMS]
 
-    with Context(Config(BinDirectory=os.path.join(os.path.dirname(__file__), "bin/"),
-                        ConfigDirectory=os.path.join(os.path.dirname(__file__), "configs/"),
-                        Update=update)) as ctx:
+    with Context(Config(BinDirectory=os.path.abspath(os.path.join(os.path.dirname(__file__), "bin/")),
+                        ConfigDirectory=os.path.abspath(os.path.join(os.path.dirname(__file__), "configs/")),
+                        Force=force)) as ctx:
 
         for key in programs:
             programCls = INSTALLER[key]
