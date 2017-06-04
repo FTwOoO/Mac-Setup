@@ -21,7 +21,7 @@ import urllib.request
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 HOME_DIR = os.path.abspath(os.path.expanduser("~"))
 ZSH_CONFIG_FILE = os.path.join(HOME_DIR, ".zshrc")
-PACKAGES_INFO_FILE = os.path.join(BASE_DIR, ".packages.json")
+PACKAGES_INFO_FILE = os.path.join(BASE_DIR, ".install.json")
 
 Config = collections.namedtuple("Config", ["BinDirectory", "ConfigDirectory", "Force"])
 
@@ -48,7 +48,10 @@ class Context(contextlib.AbstractContextManager):
 
     def __enter__(self):
         with open(PACKAGES_INFO_FILE, 'r') as f:
-            d = json.loads(f.read())
+            try:
+                d = json.loads(f.read())
+            except json.decoder.JSONDecodeError:
+                return self
 
             for k, v in d.items():
                 self.installInfo[k] = InstallationInfo(**v)
@@ -69,7 +72,7 @@ PackageVersionInfo = collections.namedtuple("PackageVersionInfo", ["Version", "P
 
 class Program:
     def __init__(self, ctx: Context):
-        self._ctx: Context = ctx
+        self._ctx = ctx
 
     @property
     def ctx(self) -> Context:
@@ -366,7 +369,7 @@ class Zsh(Program):
         return PackageVersionInfo(Version="1", PackageURL="")
 
     def _install(self, packageInfo: PackageVersionInfo):
-        zsh_config = os.path.join(self.ctx.config.ConfigDirectory, "shell/zshrc.sh")
+        zsh_config = os.path.join(self.ctx.config.ConfigDirectory, ".zshrc")
 
         target = pathlib.Path(ZSH_CONFIG_FILE)
         if target.is_file() or target.is_symlink():
@@ -405,12 +408,12 @@ INSTALLER = {
     'openssl': OpenSSL,
 }
 
-CMD_FORCE= 'force'
+CMD_FORCE = 'force'
 CMD_PROGRAMS = 'programs'
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(prog='setup_system')
+    parser = argparse.ArgumentParser(prog='install.py')
     parser.add_argument('--force', '-f',
                         dest=CMD_FORCE,
                         action='store_true',
@@ -425,7 +428,7 @@ if __name__ == "__main__":
     programs = args[CMD_PROGRAMS]
 
     with Context(Config(BinDirectory=os.path.abspath(os.path.join(os.path.dirname(__file__), "bin/")),
-                        ConfigDirectory=os.path.abspath(os.path.join(os.path.dirname(__file__), "configs/")),
+                        ConfigDirectory=os.path.abspath(os.path.join(os.path.dirname(__file__), "configs_home/")),
                         Force=force)) as ctx:
 
         for key in programs:
