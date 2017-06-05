@@ -9,10 +9,13 @@ import subprocess
 import sys
 import typing
 
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+CONFIGS_DIR = os.path.join(BASE_DIR, "configs_home/")
+APPS_DIR = os.path.join(BASE_DIR, 'markup_resource/')
+
 input_func = input
 PLATFORM_DARWIN = 'Darwin'
 PLATFORM_LINUX = 'Linux'
-APPS_DIR = 'markup_resource/'
 
 
 class ColorFormatCodes:
@@ -277,7 +280,7 @@ class ApplicationRunner(object):
         self.verbose = options.verbose
 
     def __getFilepaths(self, filename):
-        return (os.path.join(os.environ['HOME'], filename), os.path.join(self.mackup_folder, filename))
+        return (os.path.join(os.environ['HOME'], filename), os.path.abspath(os.path.join(self.mackup_folder, filename)))
 
     def backup(self):
         """
@@ -300,25 +303,18 @@ class ApplicationRunner(object):
         for filename in self.files:
             (home_filepath, mackup_filepath) = self.__getFilepaths(filename)
 
-            # If the file exists and is not already a link pointing to Mackup
-            if ((os.path.isfile(home_filepath) or
-                     os.path.isdir(home_filepath)) and
-                    not (os.path.islink(home_filepath) and
-                             (os.path.isfile(mackup_filepath) or
-                                  os.path.isdir(mackup_filepath)) and
-                             os.path.samefile(home_filepath,
-                                              mackup_filepath))):
+            if not os.path.exists(home_filepath):
+                print("Doing nothing: {} does not exist".format(home_filepath))
 
-                if self.verbose:
-                    print("Backing up\n  {}\n  to\n  {} ..."
-                          .format(home_filepath, mackup_filepath))
+            elif os.path.islink(home_filepath):
+                if os.path.exists(mackup_filepath) and os.path.samefile(home_filepath, mackup_filepath):
+                    print("Doing nothing: {} is already backed up to {}".format(home_filepath, mackup_filepath))
                 else:
-                    print("Backing up {} ...".format(filename))
+                    print("Doing nothing: {} is a broken link, you might want to fix it.".format(home_filepath))
+            else:
+                print("Backing up {} to {} ...".format(home_filepath, mackup_filepath))
 
-                # Check if we already have a backup
                 if os.path.exists(mackup_filepath):
-
-                    # Name it right
                     if os.path.isfile(mackup_filepath):
                         file_type = 'file'
                     elif os.path.isdir(mackup_filepath):
@@ -326,41 +322,17 @@ class ApplicationRunner(object):
                     elif os.path.islink(mackup_filepath):
                         file_type = 'link'
                     else:
-                        raise ValueError("Unsupported file: {}"
-                                         .format(mackup_filepath))
+                        raise ValueError("Unsupported file: {}".format(mackup_filepath))
 
-                    # Ask the user if he really want to replace it
                     if confirm("A {} named {} already exists in the"
                                " backup.\nAre you sure that you want to"
                                " replace it ?"
                                        .format(file_type, mackup_filepath)):
-                        # Delete the file in Mackup
                         delete(mackup_filepath)
-                        # Copy the file
-                        copy(home_filepath, mackup_filepath)
-                        # Delete the file in the home
-                        delete(home_filepath)
-                        # Link the backuped file to its original place
-                        link(mackup_filepath, home_filepath)
-                else:
-                    # Copy the file
-                    copy(home_filepath, mackup_filepath)
-                    # Delete the file in the home
-                    delete(home_filepath)
-                    # Link the backuped file to its original place
-                    link(mackup_filepath, home_filepath)
-            elif self.verbose:
-                if os.path.exists(home_filepath):
-                    print("Doing nothing\n  {}\n  "
-                          "is already backed up to\n  {}"
-                          .format(home_filepath, mackup_filepath))
-                elif os.path.islink(home_filepath):
-                    print("Doing nothing\n  {}\n  "
-                          "is a broken link, you might want to fix it."
-                          .format(home_filepath))
-                else:
-                    print("Doing nothing\n  {}\n  does not exist"
-                          .format(home_filepath))
+
+                copy(home_filepath, mackup_filepath)
+                delete(home_filepath)
+                link(mackup_filepath, home_filepath)
 
     def restore(self):
         """
@@ -475,12 +447,11 @@ class ApplicationRunner(object):
 class ApplicationsDatabase(object):
     @staticmethod
     def get_config_files() -> set:
-        apps_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), APPS_DIR)
         config_files = set()
 
-        for filename in os.listdir(apps_dir):
+        for filename in os.listdir(APPS_DIR):
             if filename.endswith('.cfg'):
-                config_files.add(os.path.join(apps_dir, filename))
+                config_files.add(os.path.join(APPS_DIR, filename))
 
         return config_files
 
@@ -592,6 +563,7 @@ class Mackup(object):
 def main():
     CMD_PROGRAMS = 'apps'
     CMD_OP = 'op'
+    CMD_DST = 'dst'
     CMD_OP_LIST = 'list'
     CMD_OP_BACKUP = 'backup'
     CMD_OP_RESTORE = 'restore'
@@ -601,14 +573,18 @@ def main():
     parser.add_argument('--op',
                         dest=CMD_OP,
                         choices=[CMD_OP_LIST, CMD_OP_BACKUP, CMD_OP_RESTORE, CMD_OP_UNINSTALL],
-                        nargs='?')
-    parser.add_argument(CMD_PROGRAMS, nargs="*", help="Programs to install")
+                        required=True)
+    parser.add_argument('--dst',
+                        dest=CMD_DST,
+                        default=CONFIGS_DIR,
+                        type=str)
+    parser.add_argument(CMD_PROGRAMS, nargs="+", help="Programs to install")
 
     args = vars(parser.parse_args())
 
     options = RunOptions()
     options.verbose = True
-    options.mackup_path = ""
+    options.mackup_path = args[CMD_DST]
     options.apps = set(args[CMD_PROGRAMS])
 
     mckp = Mackup(options)

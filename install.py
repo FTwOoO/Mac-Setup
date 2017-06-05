@@ -20,6 +20,8 @@ import urllib.request
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 HOME_DIR = os.path.abspath(os.path.expanduser("~"))
+CONFIGS_DIR = os.path.join(BASE_DIR, "configs_home/")
+BIN_DIR = os.path.abspath(BASE_DIR, "bin/")
 ZSH_CONFIG_FILE = os.path.join(HOME_DIR, ".zshrc")
 PACKAGES_INFO_FILE = os.path.join(BASE_DIR, ".install.json")
 
@@ -118,7 +120,7 @@ class Program:
             if originInfo.InstallLocation and os.path.isdir(originInfo.InstallLocation):
                 print("The program[{}] is update to date".format(self.name()))
                 return
-            else:
+            elif originInfo.InstallLocation:
                 print("Package[{}] not found on path {}".format(self.name(), originInfo.InstallLocation))
 
         self._install(versionInfo)
@@ -427,8 +429,8 @@ if __name__ == "__main__":
     force = args[CMD_FORCE]
     programs = args[CMD_PROGRAMS]
 
-    with Context(Config(BinDirectory=os.path.abspath(os.path.join(os.path.dirname(__file__), "bin/")),
-                        ConfigDirectory=os.path.abspath(os.path.join(os.path.dirname(__file__), "configs_home/")),
+    with Context(Config(BinDirectory=BIN_DIR,
+                        ConfigDirectory=CONFIGS_DIR,
                         Force=force)) as ctx:
 
         for key in programs:
