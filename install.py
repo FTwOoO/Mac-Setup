@@ -6,23 +6,24 @@ import contextlib
 import io
 import json
 import os.path
-import pathlib
 import re
 import shutil
 import ssl
-import stat
 import string
 import subprocess
+import sys
 import tarfile
 import typing
 import urllib.parse
 import urllib.request
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+sys.path.append(BASE_DIR)
+import markup
+
 HOME_DIR = os.path.abspath(os.path.expanduser("~"))
-CONFIGS_DIR = os.path.join(BASE_DIR, "configs_home/")
-BIN_DIR = os.path.join(BASE_DIR, "bin/")
-ZSH_CONFIG_FILE = os.path.join(HOME_DIR, ".zshrc")
+DEFAULT_CONFIGS_DIR = os.path.join(BASE_DIR, "configs_home/")
+DEFAULT_BIN_DIR = os.path.join(BASE_DIR, "bin/")
 PACKAGES_INFO_FILE = os.path.join(BASE_DIR, ".install.json")
 
 Config = collections.namedtuple("Config", ["BinDirectory", "ConfigDirectory", "Force"])
@@ -70,6 +71,39 @@ class Context(contextlib.AbstractContextManager):
 
 
 PackageVersionInfo = collections.namedtuple("PackageVersionInfo", ["Version", "PackageURL"])
+
+
+class ExportFile(contextlib.AbstractContextManager):
+    def __init__(self, path):
+        self.path = path
+
+    def __parse_file(self, path: str) -> list:
+        d = []
+        for line in open(path, 'r'):
+            m = re.match(r'^export \s+ (\w+) = "(.+)" \s*$', line, re.X)
+            if m:
+                d.append((m.group(1), m.group(2)))
+
+        return d
+
+    def __enter__(self):
+        self.vars = self.__parse_file(self.path)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        with open(self.path, "w") as f:
+            for key, value in self.vars:
+                f.write('export {}="{}"\n'.format(key, value))
+
+    def add(self, key: str, value: str):
+        self.vars.append((key, value))
+
+
+class PathFile(ExportFile):
+    def export_path(self, path):
+        key = "PATH"
+        value = '''$PATH:{path}'''.format(path=path)
+        return self.add(key, value)
 
 
 class Program:
@@ -372,14 +406,13 @@ class Zsh(Program):
 
     def _install(self, packageInfo: PackageVersionInfo):
         zsh_config = os.path.join(self.ctx.config.ConfigDirectory, ".zshrc")
-
-        target = pathlib.Path(ZSH_CONFIG_FILE)
-        if target.is_file() or target.is_symlink():
-            target.unlink()
-
-        target.symlink_to(zsh_config)
-        target.chmod(stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP)
         subprocess.run("zsh {}".format(zsh_config), check=True, shell=True)
+
+        options = markup.RunOptions()
+        options.mackup_path = self.ctx.config.ConfigDirectory
+        options.apps = [self.name()]
+        mkp = markup.Mackup(options)
+        mkp.restore()
 
         self.ctx.installInfo[self.name()] = InstallationInfo(
             Name=self.name(),
@@ -392,15 +425,14 @@ class Zsh(Program):
         )
 
     def export_path(self, path):
-        key = "PATH"
-        value = '''$PATH:{path}'''.format(path=path)
-        return self.export(key, value)
+        zsh_path_config = os.path.join(self.ctx.config.ConfigDirectory, "zsh/path.sh")
+        with PathFile(zsh_path_config) as f:
+            f.export_path(path)
 
     def export(self, key, value):
-        cmd = '''export {key}="{value}" '''.format(key=key, value=value)
         zsh_path_config = os.path.join(self.ctx.config.ConfigDirectory, "zsh/path.sh")
-        with open(zsh_path_config, 'a') as file:
-            file.write('{}\n'.format(cmd))
+        with ExportFile(zsh_path_config) as f:
+            f.add(key, value)
 
 
 INSTALLER = {
@@ -429,11 +461,12 @@ if __name__ == "__main__":
     force = args[CMD_FORCE]
     programs = args[CMD_PROGRAMS]
 
-    with Context(Config(BinDirectory=BIN_DIR,
-                        ConfigDirectory=CONFIGS_DIR,
+    with Context(Config(BinDirectory=DEFAULT_BIN_DIR,
+                        ConfigDirectory=DEFAULT_CONFIGS_DIR,
                         Force=force)) as ctx:
 
         for key in programs:
             programCls = INSTALLER[key]
+
             program = programCls(ctx)
             program.install()
