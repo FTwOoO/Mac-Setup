@@ -18,24 +18,6 @@ PLATFORM_DARWIN = 'Darwin'
 PLATFORM_LINUX = 'Linux'
 
 
-class ColorFormatCodes:
-    BLUE = '\033[34m'
-    BOLD = '\033[1m'
-    NORMAL = '\033[0m'
-
-
-class ConfigError(Exception):
-    pass
-
-
-def to_header(content: str):
-    return ColorFormatCodes.BLUE + content + ColorFormatCodes.NORMAL
-
-
-def to_bold(content: str):
-    return ColorFormatCodes.BOLD + content + ColorFormatCodes.NORMAL
-
-
 def confirm(question: str) -> bool:
     while True:
         answer = input_func(question + ' <Yes|No>').lower()
@@ -60,6 +42,9 @@ def delete(filepath):
         filepath (str): Absolute full path to a file. e.g. /path/to/file
     """
     # Some files have ACLs, let's remove them recursively
+    if not os.path.exists(filepath):
+        return
+
     remove_acl(filepath)
 
     # Some files have immutable attributes, let's remove them recursively
@@ -186,12 +171,6 @@ def chmod(target):
 
 
 def error_and_exit(message: str):
-    """
-    Throw an error with the given message and immediately quit.
-
-    Args:
-        message(str): The message to display.
-    """
     fail = '\033[91m'
     end = '\033[0m'
     sys.exit(fail + "Error: {}".format(message) + end)
@@ -268,180 +247,106 @@ class AppConfig:
 
 
 class RunOptions:
-    verbose: bool = False
     mackup_path: str = ""
-    apps: set = set()
+    apps: list = []
 
 
 class ApplicationRunner(object):
     def __init__(self, options: RunOptions, config: AppConfig):
         self.mackup_folder = options.mackup_path
         self.files = list(config.configuration_files)
-        self.verbose = options.verbose
 
-    def __getFilepaths(self, filename):
+    def __get_file_paths(self, filename):
         return (os.path.join(os.environ['HOME'], filename), os.path.abspath(os.path.join(self.mackup_folder, filename)))
 
     def backup(self):
-        """
-        Backup the application config files.
 
-        Algorithm:
-            if exists home/file
-              if home/file is a real file
-                if exists mackup/file
-                  are you sure ?
-                  if sure
-                    rm mackup/file
-                    mv home/file mackup/file
-                    link mackup/file home/file
-                else
-                  mv home/file mackup/file
-                  link mackup/file home/file
-        """
-        # For each file used by the application
         for filename in self.files:
-            (home_filepath, mackup_filepath) = self.__getFilepaths(filename)
+            (home_filepath, mackup_filepath) = self.__get_file_paths(filename)
 
-            if not os.path.exists(home_filepath):
+            file_or_dir_exists = os.path.exists(home_filepath)
+            pointing_to_mackup = (os.path.islink(home_filepath) and
+                                  os.path.exists(mackup_filepath) and
+                                  os.path.samefile(mackup_filepath, home_filepath))
+
+            if not file_or_dir_exists:
                 print("Doing nothing: {} does not exist".format(home_filepath))
 
-            elif os.path.islink(home_filepath):
-                if os.path.exists(mackup_filepath) and os.path.samefile(home_filepath, mackup_filepath):
-                    print("Doing nothing: {} is already backed up to {}".format(home_filepath, mackup_filepath))
-                else:
-                    print("Doing nothing: {} is a broken link, you might want to fix it.".format(home_filepath))
-            else:
+            elif pointing_to_mackup:
+                print("Doing nothing: {} is already backed up to {}".format(home_filepath, mackup_filepath))
+
+            elif file_or_dir_exists and not pointing_to_mackup:
+
+                if os.path.islink(home_filepath):
+                    print("{} is a broken link.".format(home_filepath))
+
                 print("Backing up {} to {} ...".format(home_filepath, mackup_filepath))
 
                 if os.path.exists(mackup_filepath):
-                    if os.path.isfile(mackup_filepath):
-                        file_type = 'file'
-                    elif os.path.isdir(mackup_filepath):
-                        file_type = 'folder'
-                    elif os.path.islink(mackup_filepath):
-                        file_type = 'link'
-                    else:
-                        raise ValueError("Unsupported file: {}".format(mackup_filepath))
+                    if not confirm("{} already exists in the"
+                                   " backup.\nAre you sure that you want to"
+                                   " replace it ?".format(mackup_filepath)):
+                        return
 
-                    if confirm("A {} named {} already exists in the"
-                               " backup.\nAre you sure that you want to"
-                               " replace it ?"
-                                       .format(file_type, mackup_filepath)):
-                        delete(mackup_filepath)
+                    delete(mackup_filepath)
 
                 copy(home_filepath, mackup_filepath)
                 delete(home_filepath)
                 link(mackup_filepath, home_filepath)
 
     def restore(self):
-        """
-        Restore the application config files.
 
-        Algorithm:
-            if exists mackup/file
-              if exists home/file
-                are you sure ?
-                if sure
-                  rm home/file
-                  link mackup/file home/file
-              else
-                link mackup/file home/file
-        """
-        # For each file used by the application
         for filename in self.files:
-            (home_filepath, mackup_filepath) = self.__getFilepaths(filename)
+            (home_filepath, mackup_filepath) = self.__get_file_paths(filename)
 
-            # If the file exists and is not already pointing to the mackup file
-            # and the folder makes sense on the current platform (Don't sync
-            # any subfolder of ~/Library on GNU/Linux)
-            file_or_dir_exists = (os.path.isfile(mackup_filepath) or
-                                  os.path.isdir(mackup_filepath))
+            file_or_dir_exists = os.path.exists(mackup_filepath)
             pointing_to_mackup = (os.path.islink(home_filepath) and
                                   os.path.exists(mackup_filepath) and
-                                  os.path.samefile(mackup_filepath,
-                                                   home_filepath))
-            supported = True
+                                  os.path.samefile(mackup_filepath, home_filepath))
 
-            if file_or_dir_exists and not pointing_to_mackup and supported:
-                if self.verbose:
-                    print("Restoring\n  linking {}\n  to      {} ..."
-                          .format(home_filepath, mackup_filepath))
-                else:
-                    print("Restoring {} ...".format(filename))
+            if not file_or_dir_exists:
+                print("Doing nothing: {} does not exist".format(mackup_filepath))
 
-                # Check if there is already a file in the home folder
+            elif pointing_to_mackup:
+                print("Doing nothing: {} already linked by {}".format(mackup_filepath, home_filepath))
+
+            elif file_or_dir_exists and not pointing_to_mackup:
+
+                if os.path.islink(home_filepath):
+                    print("{} is a broken link.".format(home_filepath))
+
+                print("Restoring linking {} to {} ...".format(home_filepath, mackup_filepath))
+
                 if os.path.exists(home_filepath):
-                    # Name it right
-                    if os.path.isfile(home_filepath):
-                        file_type = 'file'
-                    elif os.path.isdir(home_filepath):
-                        file_type = 'folder'
-                    elif os.path.islink(home_filepath):
-                        file_type = 'link'
-                    else:
-                        raise ValueError("Unsupported file: {}"
-                                         .format(mackup_filepath))
+                    if not confirm("You already have {} in your"
+                                   " home.\nDo you want to replace it with"
+                                   " your backup ?".format(filename)):
+                        return
 
-                    if confirm("You already have a {} named {} in your"
-                               " home.\nDo you want to replace it with"
-                               " your backup ?"
-                                       .format(file_type, filename)):
-                        delete(home_filepath)
-                        link(mackup_filepath, home_filepath)
-                else:
-                    link(mackup_filepath, home_filepath)
-            elif self.verbose:
-                if os.path.exists(home_filepath):
-                    print("Doing nothing\n  {}\n  already linked by\n  {}"
-                          .format(mackup_filepath, home_filepath))
-                elif os.path.islink(home_filepath):
-                    print("Doing nothing\n  {}\n  "
-                          "is a broken link, you might want to fix it."
-                          .format(home_filepath))
-                else:
-                    print("Doing nothing\n  {}\n  does not exist"
-                          .format(mackup_filepath))
-
-    def uninstall(self):
-        """
-        Uninstall Mackup.
-
-        Restore any file where it was before the 1st Mackup backup.
-
-        Algorithm:
-            for each file in config
-                if mackup/file exists
-                    if home/file exists
-                        delete home/file
-                    copy mackup/file home/file
-            delete the mackup folder
-            print how to delete mackup
-        """
-        # For each file used by the application
-        for filename in self.files:
-            (home_filepath, mackup_filepath) = self.__getFilepaths(filename)
-
-            # If the mackup file exists
-            if (os.path.isfile(mackup_filepath) or
-                    os.path.isdir(mackup_filepath)):
-                # Check if there is a corresponding file in the home folder
-                if os.path.exists(home_filepath):
-                    if self.verbose:
-                        print("Reverting {}\n  at {} ..."
-                              .format(mackup_filepath, home_filepath))
-                    else:
-                        print("Reverting {} ...".format(filename))
-
-                    # If there is, delete it as we are gonna copy the Dropbox
-                    # one there
                     delete(home_filepath)
 
-                    # Copy the Dropbox file to the home folder
-                    copy(mackup_filepath, home_filepath)
-            elif self.verbose:
-                print("Doing nothing, {} does not exist"
-                      .format(mackup_filepath))
+                link(mackup_filepath, home_filepath)
+
+    def uninstall(self):
+        for filename in self.files:
+            (home_filepath, mackup_filepath) = self.__get_file_paths(filename)
+
+            file_or_dir_exists = os.path.exists(mackup_filepath)
+            pointing_to_mackup = (os.path.islink(home_filepath) and
+                                  os.path.exists(mackup_filepath) and
+                                  os.path.samefile(mackup_filepath, home_filepath))
+
+            if not file_or_dir_exists:
+                print("Doing nothing: {} does not exist".format(mackup_filepath))
+            else:
+                print("Reverting {} at {} ...".format(mackup_filepath, home_filepath))
+                if os.path.exists(home_filepath):
+                    if not pointing_to_mackup:
+                        if not confirm("Do you want to remove {}? Yes/No".format(home_filepath)):
+                            return
+                    delete(home_filepath)
+
+                copy(mackup_filepath, home_filepath)
 
 
 class ApplicationsDatabase(object):
@@ -495,21 +400,21 @@ class Mackup(object):
         self.__check_for_usable_backup_env()
         for app_name in sorted(self.options.apps):
             app = ApplicationRunner(self.options, self.app_db.get_app(app_name))
-            self.__printAppHeader(app_name)
+            self.__print_app_header(app_name)
             app.backup()
 
     def restore(self):
         self.__check_for_usable_restore_env()
         for app_name in sorted(self.options.apps):
             app = ApplicationRunner(self.options, self.app_db.get_app(app_name))
-            self.__printAppHeader(app_name)
+            self.__print_app_header(app_name)
             app.restore()
 
     def uninstall(self):
         self.__check_for_usable_restore_env()
         for app_name in sorted(self.options.apps):
             app = ApplicationRunner(self.options, self.app_db.get_app(app_name))
-            self.__printAppHeader(app_name)
+            self.__print_app_header(app_name)
             app.uninstall()
 
     def list(self):
@@ -524,9 +429,19 @@ class Mackup(object):
         output += ("{} applications supported in Mackup".format(len(app_names)))
         print(output)
 
-    def __printAppHeader(self, app_name):
-        if self.options.verbose:
-            print(("\n{0} {1} {0}").format(to_header("---"), to_bold(app_name)))
+    def __print_app_header(self, app_name):
+        class ColorFormatCodes:
+            BLUE = '\033[34m'
+            BOLD = '\033[1m'
+            NORMAL = '\033[0m'
+
+        def to_header(content: str):
+            return ColorFormatCodes.BLUE + content + ColorFormatCodes.NORMAL
+
+        def to_bold(content: str):
+            return ColorFormatCodes.BOLD + content + ColorFormatCodes.NORMAL
+
+        print(("\n{0} {1} {0}").format(to_header("---"), to_bold(app_name)))
 
     def __check_for_usable_environment(self):
         """Check if the current env is usable and has everything's required."""
@@ -583,9 +498,8 @@ def main():
     args = vars(parser.parse_args())
 
     options = RunOptions()
-    options.verbose = True
     options.mackup_path = args[CMD_DST]
-    options.apps = set(args[CMD_PROGRAMS])
+    options.apps = list(set(args[CMD_PROGRAMS]))
 
     mckp = Mackup(options)
 
