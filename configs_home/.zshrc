@@ -1,7 +1,13 @@
 #!/usr/bin/env zsh
 
 CURRENT_FILE=`readlink ~/.zshrc`
-CURRENT_DIR=`dirname $CURRENT_FILE`
+
+if [ "$CURRENT_FILE" = "" ]
+then
+    CURRENT_DIR=`dirname $0`
+else
+    CURRENT_DIR=`dirname $CURRENT_FILE`
+fi
 
 source $CURRENT_DIR/zsh/aliases.sh
 source $CURRENT_DIR/zsh/exports.sh
