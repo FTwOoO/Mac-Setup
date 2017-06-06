@@ -398,7 +398,7 @@ class Zsh(Program):
 
     def export(self, key, value):
         cmd = '''export {key}="{value}" '''.format(key=key, value=value)
-        zsh_path_config = os.path.join(self.ctx.config.ConfigDirectory, "shell/path.sh")
+        zsh_path_config = os.path.join(self.ctx.config.ConfigDirectory, "zsh/path.sh")
         with open(zsh_path_config, 'a') as file:
             file.write('{}\n'.format(cmd))
 
