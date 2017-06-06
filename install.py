@@ -21,7 +21,7 @@ import urllib.request
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 HOME_DIR = os.path.abspath(os.path.expanduser("~"))
 CONFIGS_DIR = os.path.join(BASE_DIR, "configs_home/")
-BIN_DIR = os.path.abspath(BASE_DIR, "bin/")
+BIN_DIR = os.path.join(BASE_DIR, "bin/")
 ZSH_CONFIG_FILE = os.path.join(HOME_DIR, ".zshrc")
 PACKAGES_INFO_FILE = os.path.join(BASE_DIR, ".install.json")
 
