@@ -8,8 +8,6 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/mas
 ./setup_system.py zsh
 source ~/.zshrc
 
-#./osx.sh
-
 ### golang
 ./install_app.py go
 
