@@ -11,16 +11,8 @@ source ~/.zshrc
 #./osx.sh
 
 ### golang
-./setup_system.py go
-
-# delve debugger
-go get -u github.com/derekparker/delve
-
-# gox
-go get github.com/mitchellh/gox
-cd $GOPATH/src/github.com/mitchellh/gox/main
-go generate
+./install_app.py go
 
 ### python
-./setup_system.py python
+./install_app.py python
 pip3 install ansible

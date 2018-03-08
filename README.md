@@ -35,18 +35,3 @@ install_app.py openssl python go
 ### 备份软件的配置文件
 
 默认备份到到指定目录(默为是脚本目录下的configs_home/)
-
-```bash
-#查看支持的软件列表
-mackup.py --op list
-```
-
-```bash
-# 备份~/.zsh* 到./configs_home/下，并把原文件改成符号链接
-mackup.py --op backup --dst ./configs_home/ zsh
-```
-
-```bash
-#还原备份好的zsh配置文件目录到新系统, 将会创建~/.zshrc链接到真正的./configs_home/.zshrc
-mackup.py --op restore --dst ./configs_home/ zsh
-```
