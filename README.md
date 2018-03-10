@@ -31,7 +31,3 @@
 ```bash
 install_app.py openssl python go
 ```
-
-### 备份软件的配置文件
-
-默认备份到到指定目录(默为是脚本目录下的configs_home/)
