@@ -9,5 +9,8 @@ else
     CURRENT_DIR=`dirname $CURRENT_FILE`
 fi
 
-source $CURRENT_DIR/zsh/exports.sh
-source $CURRENT_DIR/zsh/path.sh
+# MySQL Server Setting
+export PATH="$PATH:/usr/local/mysql-5.7.18-macos10.12-x86_64/bin"
+
+# Etcd setting
+export ETCDCTL_API=3
