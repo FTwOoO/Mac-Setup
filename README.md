@@ -15,19 +15,13 @@
     * 安装目录全部设为./bin/{package_name}/
     * 添加bin/和bin/{package}/bin到PATH
 2. 可随时检查更新，实现自动从官网下载安装最新版(需要HTML页面解释抓取链接)
-3. 配置文件放到./configs_home/下面，从用户目录~/下直接链接过来
 
 ## 参考项目
 * [dev-setup](https://github.com/donnemartin/dev-setup)
 * [mackup](https://github.com/lra/mackup)
 
 # 使用
-### 一次性安装所有需要的软件(跟据自己需要添加或删除不需要的软件)
+安装python源码编译
 ```bash
-./setup_system.sh
-```
-
-### 单独安装
-```bash
-install_app.py openssl python go
+msetup --base ./env/ python
 ```
