@@ -8,6 +8,11 @@ import subprocess
 import tarfile
 import urllib.parse
 import urllib.request
+import msetup.util
+import msetup.base.install_info
+import msetup.base.config
+import msetup.base.package_version_info
+import msetup.util.parse
 
 
 def open_file_by_url(url):
@@ -28,7 +33,7 @@ def is_same_directory(path1: str, path2: str) -> bool:
     return path1.rstrip('/') == path2.rstrip('/')
 
 
-def install_source_code_tgz(config: base.config.Config, options: base.install_info.InstallationInfo) -> base.install_info.InstallationInfo:
+def install_source_code_tgz(config: msetup.base.config.Config, options: msetup.base.install_info.InstallationInfo) -> msetup.base.install_info.InstallationInfo:
     install_location = options.InstallLocation
     if not install_location:
         install_location = os.path.join(config.BinDirectory, "{}/".format(options.Name))
@@ -50,7 +55,7 @@ def install_source_code_tgz(config: base.config.Config, options: base.install_in
     # Download tar.gz file and then unpack root directory to src_dir
     with open_file_by_url(options.PackageURL) as out_file:
         tf = tarfile.open(fileobj=out_file)
-        src_dir_name = util.parse.find_first_level_of_tagfile(tf)
+        src_dir_name = msetup.util.parse.find_first_level_of_tagfile(tf)
 
         src_dir = os.path.join(config.BinDirectory, src_dir_name)
         if os.path.isdir(src_dir):
@@ -68,7 +73,7 @@ def install_source_code_tgz(config: base.config.Config, options: base.install_in
 
         os.chdir(src_dir)
 
-        resolvedInfo = base.install_info.InstallationInfo(*options)
+        resolvedInfo = msetup.base.install_info.InstallationInfo(*options)
         resolvedInfo = resolvedInfo._replace(InstallLocation=install_location)
         resolvedInfo = resolvedInfo._replace(ExecuteFileLocation=execute_file_location)
 

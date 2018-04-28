@@ -3,6 +3,7 @@ import os.path
 import os.path
 import typing
 
+import msetup.apps
 from msetup.apps.zsh import Zsh
 from msetup.base.install_info import InstallationInfo
 from msetup.base.package_version_info import PackageVersionInfo
@@ -16,17 +17,17 @@ class Python(Program):
 
     @classmethod
     def dependencies(cls) -> typing.List:
-        return [apps.openssl.OpenSSL]
+        return [msetup.apps.openssl.OpenSSL]
 
     @classmethod
     def newVersion(self) -> PackageVersionInfo:
-        nextURL = util.parse.extract_url_from_htmlpage_by_regex("https://www.python.org/downloads/",
+        nextURL = msetup.util.parse.extract_url_from_htmlpage_by_regex("https://www.python.org/downloads/",
                                                      r'<a \s href="(/downloads/release/python-[\d]+/)">')
         nextURL = 'https://www.python.org' + nextURL
-        packageURL = util.parse.extract_url_from_htmlpage_by_regex(nextURL,
+        packageURL = msetup.util.parse.extract_url_from_htmlpage_by_regex(nextURL,
                                                         r'<a \s href="([\w\.\d\:\/-]+[\d\w\.]+\.tgz)">Gzipped \s source \s tarball')
 
-        version = util.parse.get_version_string_from_package_url(packageURL)
+        version = msetup.util.parse.get_version_string_from_package_url(packageURL)
         return PackageVersionInfo(Version=version, PackageURL=packageURL)
 
     def _install(self, packageInfo: PackageVersionInfo):
@@ -35,7 +36,7 @@ class Python(Program):
         opensslLib = os.path.join(opensslLocation, "lib/")
         opensslInclude = os.path.join(opensslLocation, "include/")
 
-        self.ctx.installInfo[self.name()] = util.install.install_source_code_tgz(
+        self.ctx.installInfo[self.name()] = msetup.util.install.install_source_code_tgz(
             self.ctx.config,
             InstallationInfo(
                 Name=self.name(),
