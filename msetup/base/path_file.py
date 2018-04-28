@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-import contextlib
-import re
 
+import os.path
 
 class ExportFile:
     @classmethod
     def add(cls, key: str, value: str):
-        config_path = "~/.zsh"
+        config_path = os.path.expanduser("~/.zsh")
         with open(config_path, "w") as f:
             f.write('export {}="{}"\n'.format(key, value))
 

@@ -3,8 +3,8 @@ import abc
 import os.path
 
 import typing
-import base.context as context
-import base.package_version_info as package_version_info
+import msetup.base.context as context
+import msetup.base.package_version_info as package_version_info
 
 class Program:
     def __init__(self, ctx: context.Context):

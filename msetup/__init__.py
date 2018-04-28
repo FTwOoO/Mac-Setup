@@ -1,12 +1,12 @@
 import argparse
 
-from apps.golang import Golang
-from apps.openssl import OpenSSL
-from apps.python3 import Python
-from apps.zsh import Zsh
-from base import DEFAULT_BIN_DIR, DEFAULT_CONFIGS_DIR
-from base.config import Config
-from base.context import Context
+from msetup.apps.golang import Golang
+from msetup.apps.openssl import OpenSSL
+from msetup.apps.python3 import Python
+from msetup.apps.zsh import Zsh
+from msetup.base import DEFAULT_BIN_DIR, DEFAULT_CONFIGS_DIR
+from msetup.base.config import Config
+from msetup.base.context import Context
 
 INSTALLER = {
     'go': Golang,
@@ -18,7 +18,8 @@ INSTALLER = {
 CMD_FORCE = 'force'
 CMD_PROGRAMS = 'programs'
 
-if __name__ == "__main__":
+
+def main():
 
     parser = argparse.ArgumentParser(prog='install.py')
     parser.add_argument('--force', '-f',
@@ -43,3 +44,6 @@ if __name__ == "__main__":
 
             program = programCls(ctx)
             program.install()
+
+if __name__ == "__main__":
+    main()

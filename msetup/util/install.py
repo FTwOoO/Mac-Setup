@@ -9,10 +9,6 @@ import tarfile
 import urllib.parse
 import urllib.request
 
-import base.config
-import base.context
-import base.install_info
-import util.parse
 
 def open_file_by_url(url):
     out_file = io.BytesIO()

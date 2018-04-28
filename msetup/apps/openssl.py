@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 import os.path
 
-import util.install
-import util.parse
-from apps.zsh import Zsh
-from base.install_info import InstallationInfo
-from base.package_version_info import PackageVersionInfo
-from base.program import Program
+from msetup.apps.zsh import Zsh
+from msetup.base.install_info import InstallationInfo
+from msetup.base.package_version_info import PackageVersionInfo
+from msetup.base.program import Program
+
 
 class OpenSSL(Program):
     @classmethod

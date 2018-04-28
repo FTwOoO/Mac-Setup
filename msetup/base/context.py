@@ -2,12 +2,10 @@
 
 import contextlib
 import json
-
 import typing
 
-import base
-from base.config import Config
-from base.install_info import InstallationInfo
+from msetup.base.config import Config
+from msetup.base.install_info import InstallationInfo
 
 
 class Context(contextlib.AbstractContextManager):
