@@ -53,8 +53,7 @@ def install_source_code_tgz(config: base.config.Config, options: base.install_in
     src_dir = ""
 
     # Download tar.gz file and then unpack root directory to src_dir
-    with open('/Users/ganxiangle/Library/Mobile Documents/com~apple~CloudDocs/Workspace/fooltwo.me/go1.10.3.darwin-amd64.tar.gz', 'rb') as out_file:
-    #with open_file_by_url(options.PackageURL) as out_file:
+    with open_file_by_url(options.PackageURL) as out_file:
         tf = tarfile.open(fileobj=out_file)
         src_dir_name = util.parse.find_first_level_of_tagfile(tf)
 
