@@ -4,9 +4,9 @@ import contextlib
 import json
 import typing
 
-import msetup.base
-from msetup.base.config import Config
-from msetup.base.install_info import InstallationInfo
+import base
+from base.config import Config
+from base.install_info import InstallationInfo
 
 
 class Context(contextlib.AbstractContextManager):
@@ -17,7 +17,7 @@ class Context(contextlib.AbstractContextManager):
         self.config = config
 
     def __enter__(self):
-        with open(msetup.base.PACKAGES_INFO_FILE, 'r') as f:
+        with open(base.PACKAGES_INFO_FILE, 'r') as f:
             try:
                 d = json.loads(f.read())
             except json.decoder.JSONDecodeError:
@@ -28,7 +28,7 @@ class Context(contextlib.AbstractContextManager):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        with open(msetup.base.PACKAGES_INFO_FILE, 'w') as f:
+        with open(base.PACKAGES_INFO_FILE, 'w') as f:
             d = {}
             for k, v in self.installInfo.items():
                 d[k] = v._asdict()

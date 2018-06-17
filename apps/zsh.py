@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-from msetup.base.package_version_info import PackageVersionInfo
-from msetup.base.path_file import PathFile, ExportFile
-from msetup.base.program import Program
+from base.package_version_info import PackageVersionInfo
+from base.path_file import PathFile, ExportFile
+from base.program import Program
 
 
 class Zsh(Program):

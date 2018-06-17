@@ -1,13 +1,13 @@
 import argparse
 
-from msetup.apps.golang import Golang
-from msetup.apps.openssl import OpenSSL
-from msetup.apps.python3 import Python
-from msetup.apps.zsh import Zsh
-import msetup.base
-from msetup.base.context import Context
-from msetup.base.config import Config
-from msetup.base import DEFAULT_BIN_DIR, DEFAULT_CONFIGS_DIR
+from apps.golang import Golang
+from apps.openssl import OpenSSL
+from apps.python3 import Python
+from apps.zsh import Zsh
+import base
+from base.context import Context
+from base.config import Config
+from base import DEFAULT_BIN_DIR, DEFAULT_CONFIGS_DIR
 
 INSTALLER = {
     'go': Golang,
@@ -43,7 +43,7 @@ def main():
     force = args[CMD_FORCE]
     programs = args[CMD_PROGRAMS]
     base_dir = args[CMD_BASE_DIR]
-    msetup.base.setup_base_dir(base_dir)
+    base.setup_base_dir(base_dir)
 
     with Context(Config(BinDirectory=DEFAULT_BIN_DIR,
                         ConfigDirectory=DEFAULT_CONFIGS_DIR,
