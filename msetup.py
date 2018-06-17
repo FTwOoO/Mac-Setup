@@ -7,7 +7,6 @@ from apps.zsh import Zsh
 import base
 from base.context import Context
 from base.config import Config
-from base import DEFAULT_BIN_DIR, DEFAULT_CONFIGS_DIR
 
 INSTALLER = {
     'go': Golang,
@@ -45,8 +44,8 @@ def main():
     base_dir = args[CMD_BASE_DIR]
     base.setup_base_dir(base_dir)
 
-    with Context(Config(BinDirectory=DEFAULT_BIN_DIR,
-                        ConfigDirectory=DEFAULT_CONFIGS_DIR,
+    with Context(Config(BinDirectory=base.get_bin_dir(),
+                        ConfigDirectory=base.get_config_dir(),
                         Force=force)) as ctx:
 
         for key in programs:
